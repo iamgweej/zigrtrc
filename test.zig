@@ -73,7 +73,7 @@ pub fn main() !void {
             const v = @intToFloat(f64, j) / (height_float - 1.0);
             const r = cam.getRay(u, v);
             const color = rayColor(&r, &world.hittable);
-            try vec3.writeColor(&stdout, &color);
+            try vec3.writeColor(&stdout, &color, 1);
         }
     }
     try stderr.print("\nDone\n", .{});

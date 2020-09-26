@@ -59,11 +59,26 @@ pub const Color = Vec3;
 
 const OutStream = std.io.OutStream(std.fs.File, std.os.WriteError, std.fs.File.write);
 
-pub inline fn writeColor(out: *const OutStream, color: *const Color) !void {
+inline fn clamp(x: f64, min: f64, max: f64) f64 {
+    if (x < min) {
+        return min;
+    }
+    if (x > max) {
+        return max;
+    }
+    return x;
+}
+
+pub inline fn writeColor(out: *const OutStream, color: *const Color, samples_per_pixel: i32) !void {
+    const scale = 1.0 / @intToFloat(f64, samples_per_pixel);
+    const r = scale * color.x();
+    const g = scale * color.y();
+    const b = scale * color.z();
+
     try out.print("{} {} {}\n", .{
-        @floatToInt(i32, 255.999 * color.x()),
-        @floatToInt(i32, 255.999 * color.y()),
-        @floatToInt(i32, 255.999 * color.z()),
+        @floatToInt(i32, 256 * clamp(r, 0.0, 0.999)),
+        @floatToInt(i32, 256 * clamp(g, 0.0, 0.999)),
+        @floatToInt(i32, 256 * clamp(b, 0.0, 0.999)),
     });
 }
 
