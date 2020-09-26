@@ -36,6 +36,8 @@ pub fn main() !void {
     const stdout = std.io.getStdOut().outStream();
     const stderr = std.io.getStdErr().outStream();
 
+    var rnd = std.rand.DefaultPrng.init(std.time.timestamp());
+
     // Image
     comptime const ratio = 16.0 / 9.0;
     comptime const width: i32 = 400;
@@ -73,8 +75,8 @@ pub fn main() !void {
             var color = Color.zero();
             var s: i32 = 0;
             while (s < samples_per_pixel) : (s += 1) {
-                const u = @intToFloat(f64, i) / (width_float - 1.0);
-                const v = @intToFloat(f64, j) / (height_float - 1.0);
+                const u = (@intToFloat(f64, i) + rnd.random.float(f64)) / (width_float - 1.0);
+                const v = (@intToFloat(f64, j) + rnd.random.float(f64)) / (height_float - 1.0);
                 const r = cam.getRay(u, v);
                 color.add(&rayColor(&r, &world.hittable));
             }
