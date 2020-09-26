@@ -69,8 +69,8 @@ pub fn main() !void {
 
     const material_ground = Lambertian.init(&Color.new(0.8, 0.8, 0.0), &rnd.random);
     const material_center = Lambertian.init(&Color.new(0.7, 0.3, 0.3), &rnd.random);
-    const material_left = Metal.init(&Color.new(0.8, 0.8, 0.8));
-    const material_right = Metal.init(&Color.new(0.8, 0.6, 0.2));
+    const material_left = Metal.init(&Color.new(0.8, 0.8, 0.8), 0.3, &rnd.random);
+    const material_right = Metal.init(&Color.new(0.8, 0.6, 0.2), 1.0, &rnd.random);
 
     const center = Sphere.new(&Point.new(0, 0, -1), 0.5, &material_center.material);
     const ground = Sphere.new(&Point.new(0, -100.5, -1), 100, &material_ground.material);

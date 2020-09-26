@@ -120,3 +120,8 @@ pub fn randomUnitVector(rnd: *std.rand.Random) Vec3 {
     const r = std.math.sqrt(1 - z * z);
     return Vec3.new(r * std.math.cos(a), r * std.math.sin(a), z);
 }
+
+pub fn randomUnitSphereVector(rnd: *std.rand.Random) Vec3 {
+    const r = util.randomFloatInRange(rnd, f64, 0, 1);
+    return randomUnitVector(rnd).scaled(r);
+}
