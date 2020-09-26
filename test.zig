@@ -5,6 +5,7 @@ const ray = @import("./ray.zig");
 const hittable = @import("./hittable.zig");
 const sphere = @import("./sphere.zig");
 const hittable_list = @import("./hittable_list.zig");
+const camera = @import("./camera.zig");
 
 const Point = vec3.Point;
 const Color = vec3.Color;
@@ -16,7 +17,9 @@ const Hittable = hittable.Hittable;
 const Sphere = sphere.Sphere;
 const HittableList = hittable_list.HittableList;
 
-fn ray_color(r: *const Ray, world: *const Hittable) Color {
+const Camera = camera.Camera;
+
+fn rayColor(r: *const Ray, world: *const Hittable) Color {
     if (world.hit(r, 0, std.math.inf(f64))) |record| {
         return record.normal.added(&Color.new(1, 1, 1)).scaled(0.5);
     }
@@ -33,12 +36,18 @@ pub fn main() !void {
     const stdout = std.io.getStdOut().outStream();
     const stderr = std.io.getStdErr().outStream();
 
+    var rnd = std.rand.DefaultPrng.init(std.time.timestamp());
+
     // Image
     comptime const ratio = 16.0 / 9.0;
     comptime const width: i32 = 400;
-    comptime const widthFloat = @intToFloat(f64, width);
-    comptime const height = @floatToInt(i32, widthFloat / ratio);
-    comptime const heightFloat = @intToFloat(f64, height);
+    comptime const width_float = @intToFloat(f64, width);
+    comptime const height = @floatToInt(i32, width_float / ratio);
+    comptime const height_float = @intToFloat(f64, height);
+    comptime const samples_per_pixel = 100;
+
+    // Camera
+    const cam = Camera.init();
 
     // World
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -52,16 +61,6 @@ pub fn main() !void {
     try world.add(&sphere1.hittable);
     try world.add(&sphere2.hittable);
 
-    // Camera
-    comptime const viewport_height = 2.0;
-    comptime const viewport_width = ratio * viewport_height;
-    comptime const focal_length = 1.0;
-
-    comptime const origin = Point.zero();
-    comptime const horizontal = Vec3.new(viewport_width, 0, 0);
-    comptime const vertical = Vec3.new(0, viewport_height, 0);
-    comptime const lower_left_corner = origin.subbed(&horizontal.scaled(0.5)).subbed(&vertical.scaled(0.5)).subbed(&Vec3.new(0, 0, focal_length));
-
     // Render
 
     try stdout.print("P3\n{} {}\n255\n", .{ width, height });
@@ -73,12 +72,15 @@ pub fn main() !void {
 
         var i: i32 = 0;
         while (i < width) : (i += 1) {
-            const u = @intToFloat(f64, i) / (widthFloat - 1.0);
-            const v = @intToFloat(f64, j) / (heightFloat - 1.0);
-            const direction = lower_left_corner.added(&horizontal.scaled(u)).added(&vertical.scaled(v)).subbed(&origin);
-            const r = Ray.new(&origin, &direction);
-            const color = ray_color(&r, &world.hittable);
-            try vec3.write_color(&stdout, &color);
+            var color = Color.zero();
+            var s: i32 = 0;
+            while (s < samples_per_pixel) : (s += 1) {
+                const u = (@intToFloat(f64, i) + rnd.random.float(f64)) / (width_float - 1.0);
+                const v = (@intToFloat(f64, j) + rnd.random.float(f64)) / (height_float - 1.0);
+                const r = cam.getRay(u, v);
+                color.add(&rayColor(&r, &world.hittable));
+            }
+            try vec3.writeColor(&stdout, &color, samples_per_pixel);
         }
     }
     try stderr.print("\nDone\n", .{});

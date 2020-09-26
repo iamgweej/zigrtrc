@@ -33,6 +33,12 @@ pub const Vec3 = struct {
         return Self{ .p = [_]f64{ t * self.p[0], t * self.p[1], t * self.p[2] } };
     }
 
+    pub inline fn add(self: *Self, other: *const Self) void {
+        self.p[0] += other.p[0];
+        self.p[1] += other.p[1];
+        self.p[2] += other.p[2];
+    }
+
     pub inline fn added(self: *const Self, other: *const Self) Self {
         return Self{ .p = [_]f64{ self.p[0] + other.p[0], self.p[1] + other.p[1], self.p[2] + other.p[2] } };
     }
@@ -59,11 +65,26 @@ pub const Color = Vec3;
 
 const OutStream = std.io.OutStream(std.fs.File, std.os.WriteError, std.fs.File.write);
 
-pub inline fn write_color(out: *const OutStream, color: *const Color) !void {
+inline fn clamp(x: f64, min: f64, max: f64) f64 {
+    if (x < min) {
+        return min;
+    }
+    if (x > max) {
+        return max;
+    }
+    return x;
+}
+
+pub inline fn writeColor(out: *const OutStream, color: *const Color, samples_per_pixel: i32) !void {
+    const scale = 1.0 / @intToFloat(f64, samples_per_pixel);
+    const r = scale * color.x();
+    const g = scale * color.y();
+    const b = scale * color.z();
+
     try out.print("{} {} {}\n", .{
-        @floatToInt(i32, 255.999 * color.x()),
-        @floatToInt(i32, 255.999 * color.y()),
-        @floatToInt(i32, 255.999 * color.z()),
+        @floatToInt(i32, 256 * clamp(r, 0.0, 0.999)),
+        @floatToInt(i32, 256 * clamp(g, 0.0, 0.999)),
+        @floatToInt(i32, 256 * clamp(b, 0.0, 0.999)),
     });
 }
 
