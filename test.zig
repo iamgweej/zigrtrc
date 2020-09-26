@@ -19,9 +19,16 @@ const HittableList = hittable_list.HittableList;
 
 const Camera = camera.Camera;
 
-fn rayColor(r: *const Ray, world: *const Hittable) Color {
-    if (world.hit(r, 0, std.math.inf(f64))) |record| {
-        return record.normal.added(&Color.new(1, 1, 1)).scaled(0.5);
+var rnd: std.rand.DefaultPrng = undefined;
+
+fn rayColor(r: *const Ray, world: *const Hittable, depth: i32) Color {
+    if (depth <= 0) {
+        return Color.new(0, 0, 0);
+    }
+
+    if (world.hit(r, 0.001, std.math.inf(f64))) |record| {
+        const target = record.p.added(&vec3.randomInUnitHemisphere(&rnd.random, &record.normal));
+        return rayColor(&Ray.new(&record.p, &target.subbed(&record.p)), world, depth - 1).scaled(0.5);
     }
 
     comptime const base1 = Color.new(1.0, 1.0, 1.0);
@@ -35,8 +42,7 @@ fn rayColor(r: *const Ray, world: *const Hittable) Color {
 pub fn main() !void {
     const stdout = std.io.getStdOut().outStream();
     const stderr = std.io.getStdErr().outStream();
-
-    var rnd = std.rand.DefaultPrng.init(std.time.timestamp());
+    rnd = std.rand.DefaultPrng.init(std.time.timestamp());
 
     // Image
     comptime const ratio = 16.0 / 9.0;
@@ -45,6 +51,7 @@ pub fn main() !void {
     comptime const height = @floatToInt(i32, width_float / ratio);
     comptime const height_float = @intToFloat(f64, height);
     comptime const samples_per_pixel = 100;
+    comptime const max_depth = 50;
 
     // Camera
     const cam = Camera.init();
@@ -78,7 +85,7 @@ pub fn main() !void {
                 const u = (@intToFloat(f64, i) + rnd.random.float(f64)) / (width_float - 1.0);
                 const v = (@intToFloat(f64, j) + rnd.random.float(f64)) / (height_float - 1.0);
                 const r = cam.getRay(u, v);
-                color.add(&rayColor(&r, &world.hittable));
+                color.add(&rayColor(&r, &world.hittable, max_depth));
             }
             try vec3.writeColor(&stdout, &color, samples_per_pixel);
         }
