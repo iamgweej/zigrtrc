@@ -59,7 +59,7 @@ pub const Color = Vec3;
 
 const OutStream = std.io.OutStream(std.fs.File, std.os.WriteError, std.fs.File.write);
 
-pub inline fn write_color(out: *const OutStream, color: *const Color) !void {
+pub inline fn writeColor(out: *const OutStream, color: *const Color) !void {
     try out.print("{} {} {}\n", .{
         @floatToInt(i32, 255.999 * color.x()),
         @floatToInt(i32, 255.999 * color.y()),

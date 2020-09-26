@@ -19,7 +19,7 @@ const HittableList = hittable_list.HittableList;
 
 const Camera = camera.Camera;
 
-fn ray_color(r: *const Ray, world: *const Hittable) Color {
+fn rayColor(r: *const Ray, world: *const Hittable) Color {
     if (world.hit(r, 0, std.math.inf(f64))) |record| {
         return record.normal.added(&Color.new(1, 1, 1)).scaled(0.5);
     }
@@ -72,8 +72,8 @@ pub fn main() !void {
             const u = @intToFloat(f64, i) / (width_float - 1.0);
             const v = @intToFloat(f64, j) / (height_float - 1.0);
             const r = cam.getRay(u, v);
-            const color = ray_color(&r, &world.hittable);
-            try vec3.write_color(&stdout, &color);
+            const color = rayColor(&r, &world.hittable);
+            try vec3.writeColor(&stdout, &color);
         }
     }
     try stderr.print("\nDone\n", .{});
