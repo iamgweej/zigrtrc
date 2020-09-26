@@ -42,6 +42,7 @@ pub fn main() !void {
     comptime const width_float = @intToFloat(f64, width);
     comptime const height = @floatToInt(i32, width_float / ratio);
     comptime const height_float = @intToFloat(f64, height);
+    comptime const samples_per_pixel = 100;
 
     // Camera
     const cam = Camera.init();
@@ -69,11 +70,15 @@ pub fn main() !void {
 
         var i: i32 = 0;
         while (i < width) : (i += 1) {
-            const u = @intToFloat(f64, i) / (width_float - 1.0);
-            const v = @intToFloat(f64, j) / (height_float - 1.0);
-            const r = cam.getRay(u, v);
-            const color = rayColor(&r, &world.hittable);
-            try vec3.writeColor(&stdout, &color, 1);
+            var color = Color.zero();
+            var s: i32 = 0;
+            while (s < samples_per_pixel) : (s += 1) {
+                const u = @intToFloat(f64, i) / (width_float - 1.0);
+                const v = @intToFloat(f64, j) / (height_float - 1.0);
+                const r = cam.getRay(u, v);
+                color.add(&rayColor(&r, &world.hittable));
+            }
+            try vec3.writeColor(&stdout, &color, samples_per_pixel);
         }
     }
     try stderr.print("\nDone\n", .{});

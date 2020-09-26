@@ -33,6 +33,12 @@ pub const Vec3 = struct {
         return Self{ .p = [_]f64{ t * self.p[0], t * self.p[1], t * self.p[2] } };
     }
 
+    pub inline fn add(self: *Self, other: *const Self) void {
+        self.p[0] += other.p[0];
+        self.p[1] += other.p[1];
+        self.p[2] += other.p[2];
+    }
+
     pub inline fn added(self: *const Self, other: *const Self) Self {
         return Self{ .p = [_]f64{ self.p[0] + other.p[0], self.p[1] + other.p[1], self.p[2] + other.p[2] } };
     }
