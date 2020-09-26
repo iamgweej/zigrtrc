@@ -5,6 +5,7 @@ const ray = @import("./ray.zig");
 const hittable = @import("./hittable.zig");
 const sphere = @import("./sphere.zig");
 const hittable_list = @import("./hittable_list.zig");
+const material = @import("./material.zig");
 const camera = @import("./camera.zig");
 
 const Point = vec3.Point;
@@ -17,6 +18,9 @@ const Hittable = hittable.Hittable;
 const Sphere = sphere.Sphere;
 const HittableList = hittable_list.HittableList;
 
+const Lambertian = material.Lambertian;
+const Metal = material.Metal;
+
 const Camera = camera.Camera;
 
 var rnd: std.rand.DefaultPrng = undefined;
@@ -26,9 +30,11 @@ fn rayColor(r: *const Ray, world: *const Hittable, depth: i32) Color {
         return Color.new(0, 0, 0);
     }
 
-    if (world.hit(r, 0.001, std.math.inf(f64))) |record| {
-        const target = record.p.added(&vec3.randomInUnitHemisphere(&rnd.random, &record.normal));
-        return rayColor(&Ray.new(&record.p, &target.subbed(&record.p)), world, depth - 1).scaled(0.5);
+    if (world.hit(r, 0.001, std.math.inf(f64))) |hit_record| {
+        if (hit_record.mat.scatter(r, &hit_record)) |scatter_record| {
+            return rayColor(&scatter_record.scattered, world, depth - 1).multiplied(&scatter_record.attenuation);
+        }
+        return Color.new(0, 0, 0);
     }
 
     comptime const base1 = Color.new(1.0, 1.0, 1.0);
@@ -61,12 +67,21 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = &arena.allocator;
 
-    const sphere1 = Sphere.new(&Point.new(0, 0, -1), 0.5);
-    const sphere2 = Sphere.new(&Point.new(0, -100.5, -1), 100);
+    const material_ground = Lambertian.init(&Color.new(0.8, 0.8, 0.0), &rnd.random);
+    const material_center = Lambertian.init(&Color.new(0.7, 0.3, 0.3), &rnd.random);
+    const material_left = Metal.init(&Color.new(0.8, 0.8, 0.8));
+    const material_right = Metal.init(&Color.new(0.8, 0.6, 0.2));
+
+    const center = Sphere.new(&Point.new(0, 0, -1), 0.5, &material_center.material);
+    const ground = Sphere.new(&Point.new(0, -100.5, -1), 100, &material_ground.material);
+    const left = Sphere.new(&Point.new(-1.0, 0.0, -1.0), 0.5, &material_left.material);
+    const right = Sphere.new(&Point.new(1.0, 0.0, -1.0), 0.5, &material_right.material);
 
     var world = HittableList.new(allocator);
-    try world.add(&sphere1.hittable);
-    try world.add(&sphere2.hittable);
+    try world.add(&center.hittable);
+    try world.add(&ground.hittable);
+    try world.add(&right.hittable);
+    try world.add(&left.hittable);
 
     // Render
 

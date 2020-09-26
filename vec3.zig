@@ -61,6 +61,10 @@ pub const Vec3 = struct {
         return Self{ .p = [_]f64{ self.p[0] - other.p[0], self.p[1] - other.p[1], self.p[2] - other.p[2] } };
     }
 
+    pub inline fn multiplied(self: *const Self, other: *const Self) Self {
+        return Self{ .p = [_]f64{ self.p[0] * other.p[0], self.p[1] * other.p[1], self.p[2] * other.p[2] } };
+    }
+
     pub inline fn norm(self: *const Self) f64 {
         return std.math.sqrt(self.normSquared());
     }
@@ -106,14 +110,13 @@ pub inline fn dot(v: *const Vec3, u: *const Vec3) f64 {
     return (v.p[0] * u.p[0]) + (v.p[1] * u.p[1]) + (v.p[2] * u.p[2]);
 }
 
-pub fn randomInUnitSphere(rnd: *std.rand.Random) Vec3 {
+pub fn reflect(v: *const Vec3, n: *const Vec3) Vec3 {
+    return v.subbed(&n.scaled(2 * dot(v, n)));
+}
+
+pub fn randomUnitVector(rnd: *std.rand.Random) Vec3 {
     const a = util.randomFloatInRange(rnd, f64, 0, 2 * std.math.pi);
     const z = util.randomFloatInRange(rnd, f64, -1, 1);
     const r = std.math.sqrt(1 - z * z);
     return Vec3.new(r * std.math.cos(a), r * std.math.sin(a), z);
-}
-
-pub fn randomInUnitHemisphere(rnd: *std.rand.Random, normal: *const Vec3) Vec3 {
-    const in_unit_sphere = randomInUnitSphere(rnd);
-    return if (dot(&in_unit_sphere, normal) > 0.0) in_unit_sphere else in_unit_sphere.neg();
 }

@@ -2,6 +2,7 @@ const math = @import("std").math;
 const vec3 = @import("./vec3.zig");
 const ray = @import("./ray.zig");
 const hittable_module = @import("./hittable.zig");
+const material = @import("./material.zig");
 
 const Vec3 = vec3.Vec3;
 const Point = vec3.Point;
@@ -11,17 +12,20 @@ const Ray = ray.Ray;
 const Hittable = hittable_module.Hittable;
 const HitRecord = hittable_module.HitRecord;
 
+const Material = material.Material;
+
 pub const Sphere = struct {
     center: Point,
     radius: f64,
     hittable: Hittable,
+    mat: *const Material,
 
     const Self = @This();
 
     inline fn buildHitRecord(self: *const Self, r: *const Ray, t: f64) HitRecord {
         const p = r.at(t);
         const outward_normal = p.subbed(&self.center).scaled(1 / self.radius);
-        return HitRecord.fromOutwardNormal(&p, t, &outward_normal, &r.direction());
+        return HitRecord.fromOutwardNormal(&p, t, &outward_normal, &r.direction(), self.mat);
     }
 
     pub fn hit(hittable: *const Hittable, r: *const Ray, t_min: f64, t_max: f64) ?HitRecord {
@@ -48,11 +52,12 @@ pub const Sphere = struct {
         return null;
     }
 
-    pub fn new(center: *const Point, radius: f64) Self {
+    pub fn new(center: *const Point, radius: f64, mat: *const Material) Self {
         return Self{
             .center = center.*,
             .radius = radius,
             .hittable = Hittable{ .hitFn = hit },
+            .mat = mat,
         };
     }
 };
