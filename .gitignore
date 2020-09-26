@@ -1,0 +1,9 @@
+# Binaries
+*.exe
+*.i64
+*.idb
+*.obj
+*.pdb
+
+# Outputs
+*.ppm
