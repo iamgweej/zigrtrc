@@ -110,6 +110,14 @@ pub inline fn dot(v: *const Vec3, u: *const Vec3) f64 {
     return (v.p[0] * u.p[0]) + (v.p[1] * u.p[1]) + (v.p[2] * u.p[2]);
 }
 
+pub inline fn cross(u: *const Vec3, v: *const Vec3) Vec3 {
+    return Vec3.new(
+        u.p[1] * v.p[2] - u.p[2] * v.p[1],
+        u.p[2] * v.p[0] - u.p[0] * v.p[2],
+        u.p[0] * v.p[1] - u.p[1] * v.p[0],
+    );
+}
+
 pub fn reflect(v: *const Vec3, n: *const Vec3) Vec3 {
     return v.subbed(&n.scaled(2 * dot(v, n)));
 }

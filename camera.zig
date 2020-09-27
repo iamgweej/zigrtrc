@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const vec3 = @import("./vec3.zig");
 const ray = @import("./ray.zig");
 
@@ -14,25 +16,30 @@ pub const Camera = struct {
 
     const Self = @This();
 
-    pub fn init() Self {
-        comptime const ratio = 16.0 / 9.0;
-        comptime const viewport_height = 2.0;
-        comptime const viewport_width = ratio * viewport_height;
-        comptime const focal_length = 1.0;
+    pub fn init(lookfrom: *const Point, lookat: *const Point, vup: *const Vec3, vfov: f64, aspect_ratio: f64) Self {
+        const theta = (vfov / 180) * std.math.pi;
+        const h = std.math.tan(theta / 2);
+        const viewport_height = 2.0 * h;
+        const viewport_width = aspect_ratio * viewport_height;
 
-        const origin = Point.zero();
-        const horizontal = Vec3.new(viewport_width, 0, 0);
-        const vertical = Vec3.new(0, viewport_height, 0);
+        const w = lookfrom.subbed(lookat).normalize();
+        const u = vec3.cross(vup, &w).normalize();
+        const v = vec3.cross(&w, &u);
+
+        const origin = lookfrom.*;
+        const horizontal = u.scaled(viewport_width);
+        const vertical = v.scaled(viewport_height);
+        const lower_left_corner = origin.subbed(&horizontal.scaled(0.5)).subbed(&vertical.scaled(0.5)).subbed(&w);
 
         return Self{
             .origin = origin,
             .horizontal = horizontal,
             .vertical = vertical,
-            .lower_left_corner = origin.subbed(&horizontal.scaled(0.5)).subbed(&vertical.scaled(0.5)).subbed(&Vec3.new(0, 0, focal_length)),
+            .lower_left_corner = lower_left_corner,
         };
     }
 
-    pub fn getRay(self: *const Self, u: f64, v: f64) Ray {
-        return Ray.new(&self.origin, &self.lower_left_corner.added(&self.horizontal.scaled(u)).added(&self.vertical.scaled(v)).subbed(&self.origin));
+    pub fn getRay(self: *const Self, s: f64, t: f64) Ray {
+        return Ray.new(&self.origin, &self.lower_left_corner.added(&self.horizontal.scaled(s)).added(&self.vertical.scaled(t)).subbed(&self.origin));
     }
 };
