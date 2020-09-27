@@ -114,9 +114,21 @@ pub fn reflect(v: *const Vec3, n: *const Vec3) Vec3 {
     return v.subbed(&n.scaled(2 * dot(v, n)));
 }
 
+pub fn refract(uv: *const Vec3, n: *const Vec3, etai_over_etat: f64) Vec3 {
+    const cos_theta = -dot(uv, n);
+    const r_out_perp = uv.added(&n.scaled(cos_theta)).scaled(etai_over_etat);
+    const r_out_parallel = n.scaled(-std.math.sqrt(std.math.fabs(1 - r_out_perp.normSquared())));
+    return r_out_perp.added(&r_out_parallel);
+}
+
 pub fn randomUnitVector(rnd: *std.rand.Random) Vec3 {
     const a = util.randomFloatInRange(rnd, f64, 0, 2 * std.math.pi);
     const z = util.randomFloatInRange(rnd, f64, -1, 1);
     const r = std.math.sqrt(1 - z * z);
     return Vec3.new(r * std.math.cos(a), r * std.math.sin(a), z);
+}
+
+pub fn randomUnitSphereVector(rnd: *std.rand.Random) Vec3 {
+    const r = util.randomFloatInRange(rnd, f64, 0, 1);
+    return randomUnitVector(rnd).scaled(r);
 }
