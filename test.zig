@@ -61,7 +61,22 @@ pub fn main() !void {
     comptime const max_depth = 50;
 
     // Camera
-    const cam = Camera.init();
+    const lookfrom = Point.new(3,3,2);
+    const lookat = Point.new(0,0,-1);
+    const vup = Vec3.new(0,1,0);
+    const dist_to_focus = lookfrom.subbed(&lookat).norm();
+    const aperture = 2.0;
+
+    const cam = Camera.init(
+        &lookfrom,
+        &lookat,
+        &vup,
+        20.0,
+        ratio,
+        aperture,
+        dist_to_focus,
+        &rnd.random,
+    );
 
     // World
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -70,7 +85,7 @@ pub fn main() !void {
 
     const material_ground = Lambertian.init(&Color.new(0.8, 0.8, 0.0), &rnd.random);
     const material_center = Lambertian.init(&Color.new(0.7, 0.3, 0.3), &rnd.random);
-    const material_left = Dielectric.init(1.5, &rnd.random);
+    const material_left = Metal.init(&Color.new(0.8, 0.6, 0.2), 0.0, &rnd.random);
     const material_right = Dielectric.init(1.5, &rnd.random);
 
     const center = Sphere.new(&Point.new(0, 0, -1), 0.5, &material_center.material);
