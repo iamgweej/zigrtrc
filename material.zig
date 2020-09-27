@@ -74,3 +74,48 @@ pub const Metal = struct {
         };
     }
 };
+
+fn schlick(cosine: f64, ref_idx: f64) f64 {
+    const r0 = (1 - ref_idx) / (1 + ref_idx);
+    const r0_sqaured = r0 * r0;
+    return r0_sqaured + (1 - r0_sqaured) * std.math.pow(f64, 1 - cosine, 5);
+}
+
+pub const Dielectric = struct {
+    ref_idx: f64,
+    material: Material,
+    rnd: *std.rand.Random,
+
+    const Self = @This();
+
+    pub fn scatter(material: *const Material, r_in: *const Ray, rec: *const HitRecord) ?ScatterRecord {
+        const self = @fieldParentPtr(Self, "material", material);
+
+        const attenuation = Color.new(1, 1, 1);
+        const etai_over_etat = if (rec.front_face) (1.0 / self.ref_idx) else self.ref_idx;
+        const unit_direction = r_in.direction().normalize();
+
+        const cos_theta = std.math.min(-vec3.dot(&unit_direction, &rec.normal), 1.0);
+        const sin_theta = std.math.sqrt(1 - cos_theta * cos_theta);
+        if (etai_over_etat * sin_theta > 1.0 or self.rnd.float(f64) < schlick(cos_theta, etai_over_etat)) {
+            return ScatterRecord{
+                .attenuation = attenuation,
+                .scattered = Ray.new(&rec.p, &vec3.reflect(&unit_direction, &rec.normal)),
+            };
+        }
+
+        const refracted = vec3.refract(&unit_direction, &rec.normal, etai_over_etat);
+        return ScatterRecord{
+            .attenuation = attenuation,
+            .scattered = Ray.new(&rec.p, &refracted),
+        };
+    }
+
+    pub fn init(ref_idx: f64, rnd: *std.rand.Random) Self {
+        return Self{
+            .ref_idx = ref_idx,
+            .material = Material{ .scatterFn = scatter },
+            .rnd = rnd,
+        };
+    }
+};
