@@ -7,6 +7,9 @@ const sphere = @import("./sphere.zig");
 const hittable_list = @import("./hittable_list.zig");
 const material = @import("./material.zig");
 const camera = @import("./camera.zig");
+const util = @import("./util.zig");
+
+const OutStream = std.io.OutStream(std.fs.File, std.os.WriteError, std.fs.File.write);
 
 const Point = vec3.Point;
 const Color = vec3.Color;
@@ -18,11 +21,15 @@ const Hittable = hittable.Hittable;
 const Sphere = sphere.Sphere;
 const HittableList = hittable_list.HittableList;
 
+const Material = material.Material;
 const Lambertian = material.Lambertian;
 const Metal = material.Metal;
 const Dielectric = material.Dielectric;
 
 const Camera = camera.Camera;
+
+var stdout: OutStream = undefined;
+var stderr: OutStream = undefined;
 
 var rnd: std.rand.DefaultPrng = undefined;
 
@@ -46,26 +53,114 @@ fn rayColor(r: *const Ray, world: *const Hittable, depth: i32) Color {
     return base1.scaled(1.0 - t2).added(&base2.scaled(t2));
 }
 
+fn randomScene(allocator: *std.mem.Allocator) !HittableList {
+    const p = Point.new(4, 0.2, 0);
+    const r = &rnd.random;
+
+    var world = HittableList.new(allocator);
+
+    const ground_material = try allocator.create(Lambertian);
+    ground_material.* = Lambertian.init(&Color.new(0.5, 0.5, 0.5), r);
+
+    const ground = try allocator.create(Sphere);
+    ground.* = Sphere.new(&Point.new(0, -1000, 0), 1000, &ground_material.material);
+
+    try world.add(&ground.hittable);
+
+    var a: i32 = -11;
+    while (a < 11) : (a += 1) {
+        var b: i32 = -11;
+        while (b < 11) : (b += 1) {
+            const choose_mat = r.float(f64);
+
+            const center = Point.new(
+                @intToFloat(f64, a) + 0.9 * r.float(f64),
+                0.2,
+                @intToFloat(f64, b) + 0.9 * r.float(f64),
+            );
+            try stderr.print("Randomized center: {} {} {}\n", .{ center.x(), center.y(), center.z() });
+            if (center.subbed(&p).norm() > 0.9) {
+                try stderr.print("Center: {} {} {}\n", .{ center.x(), center.y(), center.z() });
+                var sphere_material: *const Material = undefined;
+
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    const lambertian_ptr = try allocator.create(Lambertian);
+                    lambertian_ptr.* = Lambertian.init(&Color.random(r), r);
+                    sphere_material = &lambertian_ptr.material;
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    const metal_ptr = try allocator.create(Metal);
+                    metal_ptr.* = Metal.init(
+                        &Color.randomInBox(r, 0.5, 1),
+                        util.randomFloatInRange(r, f64, 0, 0.5),
+                        r,
+                    );
+                    sphere_material = &metal_ptr.material;
+                } else {
+                    // glass
+                    const dielectric_ptr = try allocator.create(Dielectric);
+                    dielectric_ptr.* = Dielectric.init(1.5, r);
+                    sphere_material = &dielectric_ptr.material;
+                }
+
+                const small_sphere = try allocator.create(Sphere);
+                small_sphere.* = Sphere.new(&center, 0.2, sphere_material);
+                try world.add(&small_sphere.hittable);
+            }
+        }
+    }
+
+    //    auto material1 = make_shared<dielectric>(1.5);
+    // world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
+
+    // auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+    // world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
+
+    // auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
+    // world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
+
+    const material1 = try allocator.create(Dielectric);
+    material1.* = Dielectric.init(1.5, r);
+    const sphere1 = try allocator.create(Sphere);
+    sphere1.* = Sphere.new(&Point.new(0, 1, 0), 1.0, &material1.material);
+    try world.add(&sphere1.hittable);
+
+    const material2 = try allocator.create(Lambertian);
+    material2.* = Lambertian.init(&Color.new(0.4, 0.2, 0.1), r);
+    const sphere2 = try allocator.create(Sphere);
+    sphere2.* = Sphere.new(&Point.new(-4, 1, 0), 1.0, &material2.material);
+    try world.add(&sphere2.hittable);
+
+    const material3 = try allocator.create(Metal);
+    material3.* = Metal.init(&Color.new(0.7, 0.6, 0.5), 0.0, r);
+    const sphere3 = try allocator.create(Sphere);
+    sphere3.* = Sphere.new(&Point.new(4, 1, 0), 1.0, &material3.material);
+    try world.add(&sphere3.hittable);
+
+    return world;
+}
+
 pub fn main() !void {
-    const stdout = std.io.getStdOut().outStream();
-    const stderr = std.io.getStdErr().outStream();
+    stdout = std.io.getStdOut().outStream();
+    stderr = std.io.getStdErr().outStream();
     rnd = std.rand.DefaultPrng.init(std.time.timestamp());
 
     // Image
-    comptime const ratio = 16.0 / 9.0;
-    comptime const width: i32 = 400;
+    comptime const ratio = 3.0 / 2.0;
+    comptime const width: i32 = 1200;
     comptime const width_float = @intToFloat(f64, width);
     comptime const height = @floatToInt(i32, width_float / ratio);
     comptime const height_float = @intToFloat(f64, height);
-    comptime const samples_per_pixel = 100;
+    comptime const samples_per_pixel = 500;
     comptime const max_depth = 50;
 
     // Camera
-    const lookfrom = Point.new(3,3,2);
-    const lookat = Point.new(0,0,-1);
-    const vup = Vec3.new(0,1,0);
-    const dist_to_focus = lookfrom.subbed(&lookat).norm();
-    const aperture = 2.0;
+    const lookfrom = Point.new(13, 2, 3);
+    const lookat = Point.new(0, 0, 0);
+    const vup = Vec3.new(0, 1, 0);
+    const dist_to_focus = 10.0;
+    const aperture = 0.1;
 
     const cam = Camera.init(
         &lookfrom,
@@ -83,21 +178,7 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = &arena.allocator;
 
-    const material_ground = Lambertian.init(&Color.new(0.8, 0.8, 0.0), &rnd.random);
-    const material_center = Lambertian.init(&Color.new(0.7, 0.3, 0.3), &rnd.random);
-    const material_left = Metal.init(&Color.new(0.8, 0.6, 0.2), 0.0, &rnd.random);
-    const material_right = Dielectric.init(1.5, &rnd.random);
-
-    const center = Sphere.new(&Point.new(0, 0, -1), 0.5, &material_center.material);
-    const ground = Sphere.new(&Point.new(0, -100.5, -1), 100, &material_ground.material);
-    const left = Sphere.new(&Point.new(-1.0, 0.0, -1.0), 0.5, &material_left.material);
-    const right = Sphere.new(&Point.new(1.0, 0.0, -1.0), 0.5, &material_right.material);
-
-    var world = HittableList.new(allocator);
-    try world.add(&center.hittable);
-    try world.add(&ground.hittable);
-    try world.add(&right.hittable);
-    try world.add(&left.hittable);
+    var world = try randomScene(allocator);
 
     // Render
 
