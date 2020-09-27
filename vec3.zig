@@ -140,3 +140,10 @@ pub fn randomUnitSphereVector(rnd: *std.rand.Random) Vec3 {
     const r = util.randomFloatInRange(rnd, f64, 0, 1);
     return randomUnitVector(rnd).scaled(r);
 }
+
+pub fn randomInUnitDisk(rnd: *std.rand.Random) Vec3 {
+    const r_squared = rnd.float(f64);
+    const r = std.math.sqrt(r_squared);
+    const a = util.randomFloatInRange(rnd, f64, 0, 2 * std.math.pi);
+    return Vec3.new(r * std.math.cos(a), r * std.math.cos(a), 0);
+}

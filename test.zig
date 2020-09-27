@@ -61,7 +61,22 @@ pub fn main() !void {
     comptime const max_depth = 50;
 
     // Camera
-    const cam = Camera.init(&Point.new(-2, 2, 1), &Point.new(0, 0, -1), &Vec3.new(0, 1, 0), 20.0, ratio);
+    const lookfrom = Point.new(3,3,2);
+    const lookat = Point.new(0,0,-1);
+    const vup = Vec3.new(0,1,0);
+    const dist_to_focus = lookfrom.subbed(&lookat).norm();
+    const aperture = 2.0;
+
+    const cam = Camera.init(
+        &lookfrom,
+        &lookat,
+        &vup,
+        20.0,
+        ratio,
+        aperture,
+        dist_to_focus,
+        &rnd.random,
+    );
 
     // World
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
